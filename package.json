@@ -1,6 +1,6 @@
 {
   "name": "misthin-cli",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "author": "bwrong<ibwrong@foxmail.com>",
   "license": "ISC",
   "keywords": [
@@ -13,7 +13,7 @@
   "description": "misthin-cli脚手架，提供常用vue、react项目模板，旨在快速启动项目开发",
   "main": "index.js",
   "scripts": {
-    "publish": "nrm use npm &&npm publish &&nrm use taobao"
+    "pub": "nrm use npm && npm publish && nrm use taobao"
   },
   "bin": {
     "misthin": "./bin/misthin"
