@@ -14,3 +14,11 @@ commander
     .action(createAction);
 
 commander.parse(process.argv);
+// var yeoman = require('yeoman-environment');
+// const base = require('./index1')
+// var env = yeoman.createEnv();
+// var generatorPath = require.resolve('generator-misthin','misthin:app');
+// env.registerStub(generatorPath, 'misthin:app');
+// env.run('misthin:app', {'skip-install': true}, function (err) {
+//     console.log('done');
+// });

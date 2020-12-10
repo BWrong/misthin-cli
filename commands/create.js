@@ -7,13 +7,26 @@ const chalk = require('chalk');
 const symbols = require('log-symbols');
 const figlet = require('figlet');
 const notifier = require('node-notifier');
+const spawn = require('cross-spawn');
+const updateNotifier = require('update-notifier');
+// const execSync = require('child_process').execSync
 const clone = require('../utils/clone.js');
-const { projectList } = require('../config')
+const util = require('../utils/index');
+const { projectList } = require('../config');
 let branch = 'master';
 // 要删除的目录，相对于根目录
 const deleteDir = [];
 const initAction = async (name, option) => {
-  console.log(figlet.textSync('MISTHIN CLI'));
+  console.log(figlet.textSync('MISTHIN CLI', {
+    font: 'Small'
+    // font: 'Calvin S'
+  }));
+  // 检测版本
+  // util.checkVersion()
+  const cliPkg = require('../package.json');
+  const notifier = updateNotifier({ pkg: cliPkg, updateCheckInterval: 0 });
+  notifier.notify({isGlobal:true});
+  notifier.update;
   // 0. 检查控制台是否以运行`git `开头的命令
   if (!shell.which('git')) {
     console.log(symbols.error, '对不起，git命令不可用！');
@@ -25,7 +38,7 @@ const initAction = async (name, option) => {
     return;
   }
   // 过滤特殊字符
-  if (name.match(/[^A-Za-z0-9\u4e00-\u9fa5_-]/g)) {
+  if (name.match(/[^A-Za-z0-9_-]/g)) {
     console.log(symbols.error, '项目名称存在非法字符！');
     return;
   }
@@ -41,7 +54,7 @@ const initAction = async (name, option) => {
     }
   ];
   const answers = await inquirer.prompt(TypeQuestions);
-  const tempList = projectList[answers.type]
+  const tempList = projectList[answers.type];
   const tempQuestions = [
     {
       type: 'list',
@@ -55,7 +68,7 @@ const initAction = async (name, option) => {
   await clone(`direct:${selectTemp.url}#${branch}`, name, { clone: true });
   // 5. 清理文件
   const pwd = shell.pwd();
-  deleteDir.map(item => {
+  deleteDir.map((item) => {
     shell.rm('-rf', pwd + `/${name}/${item}`);
   });
   // 6. 写入配置文件
@@ -69,16 +82,22 @@ const initAction = async (name, option) => {
   cfgSpinner.succeed(chalk.green('配置信息写入成功！'));
   // 7. 安装依赖
   const installSpinner = ora('正在安装依赖...').start();
-  if (shell.exec('npm install').code !== 0) {
+  try {
+    spawn.sync('npm', ['install', '-depth', '0'], { stdio: 'inherit' });
+    // execSync('npm i ',{ cwd: `${pwd}/${name}` })
+  } catch (error) {
     console.log(symbols.warning, chalk.yellow('自动安装失败，请手动安装！'));
+    console.log(error);
     installSpinner.fail();
     shell.exit(1);
   }
+  // if (shell.exec('npm install').code !== 0) {
+  //   console.log(symbols.warning, chalk.yellow('自动安装失败，请手动安装！'));
+  //   installSpinner.fail();
+  //   shell.exit(1);
+  // }
   installSpinner.succeed(chalk.green('依赖安装成功！'));
-  console.log(
-    symbols.success,
-    chalk.green('\n       ♪(＾∀＾●)ﾉ \n\n  ❤   恭喜，项目创建成功  ❤ \n')
-  );
+  console.log(symbols.success, chalk.green('\n       ♪(＾∀＾●)ﾉ \n\n  ❤   恭喜，项目创建成功  ❤ \n'));
   notifier.notify({
     title: 'Misthin-cli',
     icon: path.join(__dirname, 'coulson.png'),
