@@ -1,50 +1,26 @@
 const fs = require('fs');
-const path = require('path');
 const inquirer = require('inquirer');
 const shell = require('shelljs');
 const ora = require('ora');
 const chalk = require('chalk');
-const symbols = require('log-symbols');
-const figlet = require('figlet');
-const notifier = require('node-notifier');
 const spawn = require('cross-spawn');
-const updateNotifier = require('update-notifier');
-// const execSync = require('child_process').execSync
-const clone = require('../utils/clone.js');
-const util = require('../utils/index');
-const { projectList } = require('../config');
-let branch = 'master';
+const { showLogo, checkGit, checkVersion, logWarn, logError, logSuccess, gitClone, notify } = require('../utils');
+const { projectList, toolName } = require('../config');
+
 // 要删除的目录，相对于根目录
 const deleteDir = [];
-const initAction = async (name, option) => {
-  console.log(figlet.textSync('MISTHIN CLI', {
-    font: 'Small'
-    // font: 'Calvin S'
-  }));
-  // 检测版本
-  // util.checkVersion()
-  const cliPkg = require('../package.json');
-  const notifier = updateNotifier({ pkg: cliPkg, updateCheckInterval: 0 });
-  notifier.notify({isGlobal:true});
-  notifier.update;
+module.exports = async (name, option) => {
+  // 显示logo
+  showLogo();
+  // 检测cli版本
+  checkVersion();
   // 0. 检查控制台是否以运行`git `开头的命令
-  if (!shell.which('git')) {
-    console.log(symbols.error, '对不起，git命令不可用！');
-    shell.exit(1);
-  }
-  // 1. 验证输入name是否合法
-  if (fs.existsSync(name)) {
-    console.log(symbols.warning, `已存在项目文件夹${name}！`);
-    return;
-  }
-  // 过滤特殊字符
-  if (name.match(/[^A-Za-z0-9_-]/g)) {
-    console.log(symbols.error, '项目名称存在非法字符！');
-    return;
-  }
-  // 2. 获取option，设置拉取分支
-  if (option.dev) branch = 'develop';
-  // 3. 询问用户配置
+  if (!checkGit()) return;
+  // 1. 是否已存在文件
+  if (fs.existsSync(name)) return logWarn(`${name}目录已存在！`);
+  // 2. 过滤特殊字符
+  if (name.match(/[^A-Za-z0-9_-]/g)) return logError('项目名称存在非法字符！');
+  // 3. 用户选择模板
   const TypeQuestions = [
     {
       type: 'list',
@@ -65,46 +41,33 @@ const initAction = async (name, option) => {
   ];
   const selectTemp = await inquirer.prompt(tempQuestions);
   // 4. 下载模板
-  await clone(`direct:${selectTemp.url}#${branch}`, name, { clone: true });
+  await gitClone(`direct:${selectTemp.url}`, name, { clone: true });
   // 5. 清理文件
   const pwd = shell.pwd();
-  deleteDir.map((item) => {
-    shell.rm('-rf', pwd + `/${name}/${item}`);
-  });
+  deleteDir.map((item) => shell.rm('-rf', pwd + `/${name}/${item}`));
   // 6. 写入配置文件
   shell.cd(name);
   const cfgSpinner = ora('正在写入配置信息...').start();
   let pkg = fs.readFileSync(`${pwd}/${name}/package.json`, 'utf8');
   pkg = JSON.parse(pkg);
   pkg.name = name;
-  delete pkg.author;
+  pkg.author = '';
   fs.writeFileSync(`${pwd}/${name}/package.json`, JSON.stringify(pkg), { encoding: 'utf8' });
   cfgSpinner.succeed(chalk.green('配置信息写入成功！'));
   // 7. 安装依赖
-  const installSpinner = ora('正在安装依赖...').start();
+  const installSpinner = ora('正在安装项目依赖包... \n').start();
   try {
     spawn.sync('npm', ['install', '-depth', '0'], { stdio: 'inherit' });
-    // execSync('npm i ',{ cwd: `${pwd}/${name}` })
   } catch (error) {
-    console.log(symbols.warning, chalk.yellow('自动安装失败，请手动安装！'));
+    logWarn('自动安装依赖包失败，请手动安装！');
     console.log(error);
     installSpinner.fail();
     shell.exit(1);
   }
-  // if (shell.exec('npm install').code !== 0) {
-  //   console.log(symbols.warning, chalk.yellow('自动安装失败，请手动安装！'));
-  //   installSpinner.fail();
-  //   shell.exit(1);
-  // }
-  installSpinner.succeed(chalk.green('依赖安装成功！'));
-  console.log(symbols.success, chalk.green('\n       ♪(＾∀＾●)ﾉ \n\n  ❤   恭喜，项目创建成功  ❤ \n'));
-  notifier.notify({
-    title: 'Misthin-cli',
-    icon: path.join(__dirname, 'coulson.png'),
-    message: ' ♪(＾∀＾●)ﾉ 恭喜，项目创建成功！'
-  });
+  installSpinner.succeed(chalk.green('依赖包安装成功！'));
+  logSuccess('\n       ♪(＾∀＾●)ﾉ \n\n  ❤   恭喜，项目创建成功  ❤ \n');
+  notify(toolName, ' ♪(＾∀＾●)ﾉ 恭喜，项目创建成功！');
   // 8. 打开编辑器
   if (shell.which('code')) shell.exec('code ./');
-  shell.exit(1);
+  shell.exit(0);
 };
-module.exports = initAction;
