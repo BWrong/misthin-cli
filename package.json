@@ -44,7 +44,7 @@
     "download-git-repo": "^2.0.0",
     "figlet": "^1.2.4",
     "inquirer": "^6.3.1",
-    "node-notifier": "^5.4.0",
+    "node-notifier": "^8.0.1",
     "node-ssh": "^11.1.1",
     "ora": "^3.4.0",
     "shelljs": "^0.8.3",
